@@ -25,6 +25,64 @@ from db import init_db, get_db
 from graph import get_top_nodes, get_abandoned_nodes, find_similar_nodes
 
 
+def get_best_url(label: str, node_type: str = "") -> str:
+    """
+    Find the best browser URL for a given topic/node.
+    Joins intent_nodes → semantic_events → raw_events to find source URLs.
+    """
+    db = get_db()
+    try:
+        # Find semantic events whose topic matches this node's label
+        rows = db.execute("""
+            SELECT re.browser_url
+            FROM semantic_events se
+            JOIN raw_events re ON (
+                se.raw_event_ids LIKE ('%' || re.id || '%')
+                OR se.raw_event_ids LIKE ('%' || re.screenpipe_id || '%')
+            )
+            WHERE se.topic LIKE ?
+            AND re.browser_url IS NOT NULL
+            AND re.browser_url != ''
+            ORDER BY se.intensity DESC, re.timestamp DESC
+            LIMIT 1
+        """, (f"%{label[:60]}%",)).fetchall()
+        
+        if rows:
+            return rows[0]["browser_url"]
+        
+        # Fallback: search by description match
+        rows = db.execute("""
+            SELECT re.browser_url
+            FROM semantic_events se
+            JOIN raw_events re ON (
+                se.raw_event_ids LIKE ('%' || re.id || '%')
+                OR se.raw_event_ids LIKE ('%' || re.screenpipe_id || '%')
+            )
+            WHERE se.summary LIKE ?
+            AND re.browser_url IS NOT NULL
+            AND re.browser_url != ''
+            ORDER BY se.intensity DESC
+            LIMIT 1
+        """, (f"%{label[:60]}%",)).fetchall()
+        
+        if rows:
+            return rows[0]["browser_url"]
+    finally:
+        db.close()
+    
+    return ""
+
+
+def enrich_with_url(item: dict) -> dict:
+    """Add best URL to a result item if available."""
+    title = item.get("title", "")
+    if title and not item.get("url"):
+        url = get_best_url(title)
+        if url:
+            item["url"] = url
+    return item
+
+
 def _serialize(obj):
     """JSON serializer for datetime and bytes."""
     if isinstance(obj, datetime):
@@ -39,7 +97,7 @@ def cmd_obsessions(limit=10):
     nodes = get_top_nodes(limit=limit, min_attention=0.05, status="active")
     results = []
     for n in nodes:
-        results.append({
+        item = {
             "title": n["label"],
             "subtitle": f"{n['node_type']} — attention: {n['attention_score']:.0%} — {n.get('description', '')[:80]}",
             "type": n["node_type"],
@@ -47,7 +105,8 @@ def cmd_obsessions(limit=10):
             "revisits": n["revisit_count"],
             "last_seen": n.get("last_seen", "")[:10],
             "dwell_hours": round(n["total_dwell_seconds"] / 3600, 1),
-        })
+        }
+        results.append(enrich_with_url(item))
     return results
 
 
@@ -65,7 +124,7 @@ def cmd_products(limit=15):
     for r in rows:
         n = dict(r)
         status_emoji = {"active": "🔄", "dormant": "💤", "abandoned": "❌"}.get(n.get("status", ""), "")
-        results.append({
+        item = {
             "title": n["label"],
             "subtitle": f"{status_emoji} {n.get('status', 'active')} — {n['attention_score']:.0%} attention — {n.get('description', '')[:80]}",
             "type": "product",
@@ -73,7 +132,8 @@ def cmd_products(limit=15):
             "revisits": n["revisit_count"],
             "status": n.get("status", "active"),
             "dwell_hours": round(n["total_dwell_seconds"] / 3600, 1),
-        })
+        }
+        results.append(enrich_with_url(item))
     return results
 
 
@@ -82,7 +142,7 @@ def cmd_abandoned(limit=15):
     nodes = get_abandoned_nodes(limit=limit)
     results = []
     for n in nodes:
-        results.append({
+        item = {
             "title": n["label"],
             "subtitle": f"Dropped — peak attention was {n['attention_score']:.0%} — {n.get('description', '')[:80]}",
             "type": n["node_type"],
@@ -90,7 +150,8 @@ def cmd_abandoned(limit=15):
             "first_seen": n.get("first_seen", "")[:10],
             "last_seen": n.get("last_seen", "")[:10],
             "dwell_hours": round(n["total_dwell_seconds"] / 3600, 1),
-        })
+        }
+        results.append(enrich_with_url(item))
     return results
 
 
@@ -115,16 +176,17 @@ def cmd_context():
 def cmd_search(query, limit=10):
     """Semantic search over the behavioral graph."""
     nodes = find_similar_nodes(query, limit=limit, min_similarity=0.2)
-    return [
-        {
+    results = []
+    for n in nodes:
+        item = {
             "title": n["label"],
             "subtitle": f"{n['node_type']} — match: {n.get('similarity', 0):.0%} — {n.get('description', '')[:80]}",
             "type": n["node_type"],
             "match": round(n.get("similarity", 0), 3),
             "attention": round(n["attention_score"], 3),
         }
-        for n in nodes
-    ]
+        results.append(enrich_with_url(item))
+    return results
 
 
 def cmd_recent(hours=1):

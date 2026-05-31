@@ -160,6 +160,10 @@ def format_output(data, message: str) -> str:
                 lines.append(f"  {bar}  {title}")
                 if sub:
                     lines.append(f"        {sub}")
+                # Show URL if available — Raycast auto-detects and makes clickable
+                url = item.get("url", "")
+                if url:
+                    lines.append(f"        🔗 {url}")
                 lines.append("")
     elif isinstance(data, dict):
         g = data.get("graph", {})
