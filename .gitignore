@@ -4,3 +4,4 @@ __pycache__/
 .openai_key
 .sp_key
 .env
+node_modules/

@@ -1,0 +1,58 @@
+{
+  "name": "ohright",
+  "title": "OhRight — Never Lose Context Again",
+  "description": "Natural language search over your behavioral graph. Ask \"songs I listened to\", \"products I researched\", \"what was I obsessed with\" — OhRight understands.",
+  "icon": "icon.png",
+  "author": "OhRight",
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "ask",
+      "title": "Ask OhRight",
+      "subtitle": "Search your behavioral graph",
+      "description": "Natural language — \"songs I listened to most\", \"products I forgot to buy\", \"what was I obsessed with\"",
+      "mode": "view",
+      "icon": "icon.png"
+    },
+    {
+      "name": "obsessions",
+      "title": "My Obsessions",
+      "subtitle": "What I'm currently obsessed with",
+      "description": "Quick view of your current interests and obsessions",
+      "mode": "view",
+      "icon": "icon.png"
+    },
+    {
+      "name": "products",
+      "title": "Shopping Research",
+      "subtitle": "Products I've been researching",
+      "description": "Products you researched but may have forgotten",
+      "mode": "view",
+      "icon": "icon.png"
+    },
+    {
+      "name": "setup",
+      "title": "Setup OhRight",
+      "subtitle": "Install and configure OhRight",
+      "description": "First-run setup wizard for OhRight",
+      "mode": "view",
+      "icon": "icon.png"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.87.0",
+    "@raycast/utils": "^1.18.0"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "^20.8.10",
+    "@types/react": "^18.3.3",
+    "eslint": "^8.57.0",
+    "typescript": "^5.5.0"
+  },
+  "scripts": {
+    "build": "ray build -e dist",
+    "dev": "ray develop",
+    "lint": "ray lint"
+  }
+}
