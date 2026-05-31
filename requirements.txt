@@ -1,0 +1,6 @@
+# OhRight — semantic memory layer for human digital behavior
+# Core dependencies
+
+openai>=1.0.0
+requests>=2.31.0
+numpy>=1.24.0
