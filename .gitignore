@@ -3,3 +3,4 @@ ohright.db-*
 __pycache__/
 .openai_key
 .sp_key
+.env
