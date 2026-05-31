@@ -83,12 +83,30 @@ IGNORE:
 - App launchers and desktop
 - Identical repeated frames with no new information
 
-IMPORTANT: 
-- Window titles are the BEST signal — they contain YouTube video names, Spotify song titles, article headlines, product names
-- If you see a repeating window title like "Diljit Dosanjh - Lover (Official Video)" → that's a song the user is looping
-- If a window title says "Best Ultrawide Monitors 2026" → that's product research
-- If you see "linkedin.com/feed" or LinkedIn window titles → extract the content being viewed
-- NEVER return generic topics like "tmux sessions" or "terminal usage" — those are useless
+IMPORTANT SIGNALS (in priority order):
+
+1. URL (MOST POWERFUL) — URLs reveal exact intent:
+   - youtube.com/watch?v=VIDEO_ID → that's the EXACT video they're watching
+   - amazon.in/dp/PRODUCT_ID or flipkart.com/product → product page, purchase intent
+   - reddit.com/r/SUBNAME → community interest, research
+   - google.com/search?q=QUERY → what they're searching for (decode the query parameter!)
+   - linkedin.com/jobs or linkedin.com/company → job research
+   - twitter.com/USER or x.com/USER → following a specific person
+   - github.com/REPO → working on or researching that project
+   - spotify.com/track/ID → exact song they're listening to
+   - ALWAYS extract the domain, path, and query parameters from URLs
+   
+2. Window titles — contain YouTube video names, article headlines, product names
+   - If you see a repeating window title like "Diljit Dosanjh - Lover (Official Video)" → song looping
+   - If a window title says "Best Ultrawide Monitors 2026" → product research
+
+3. OCR/screen text — actual visible content on the page
+   - Product prices, review text, article content, search results
+
+COMBINE signals: URL + window title + text = complete context
+Example: url=youtube.com/watch?v=abc123 + window="Diljit Dosanjh" + text="lo-fi hip hop" → media_consumption, song + genre
+
+ALWAYS extract and use browser URLs when present. NEVER return generic topics like "tmux sessions" or "terminal usage".
 
 Return ONLY valid JSON:
 {{
@@ -112,7 +130,8 @@ If no meaningful behavioral patterns found, return empty array: {{"semantic_even
 
 
 def format_raw_events_for_llm(events: list[dict]) -> str:
-    """Format raw screenpipe events into a concise text block for the LLM."""
+    """Format raw screenpipe events into a concise text block for the LLM.
+    URLs are placed first since they're the strongest intent signal."""
     lines = []
     for e in events:
         ts = e.get("timestamp", "")[:19]
@@ -120,12 +139,24 @@ def format_raw_events_for_llm(events: list[dict]) -> str:
         window = e.get("window_name", "")
         url = e.get("browser_url", "")
         text = (e.get("text_content") or e.get("transcription") or "")[:200]
+        url_meta = e.get("url_metadata", {})
 
         parts = [f"[id={e['id']}] {ts} | {app}"]
-        if window:
-            parts.append(f" | window: {window[:80]}")
+        
+        # URL + metadata first — strongest signal
         if url:
-            parts.append(f" | url: {url[:100]}")
+            parts.append(f"\n  url: {url}")
+            if url_meta:
+                hint = url_meta.get("title_hint", "")
+                stype = url_meta.get("site_type", "")
+                sq = url_meta.get("search_query", "")
+                if hint:
+                    parts.append(f"\n  url_parsed: {stype} | {hint}")
+                if sq:
+                    parts.append(f" (searched: \"{sq}\")")
+        
+        if window:
+            parts.append(f"\n  window: {window[:80]}")
         if text:
             parts.append(f"\n  text: {text}")
 

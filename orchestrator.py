@@ -42,6 +42,7 @@ from db import get_db
 from embeddings import embed_single, embedding_to_blob, check_ollama_available
 from extract import extract_semantic_events, extract_with_context
 from graph import upsert_node, link_nodes, decay_attention, find_similar_nodes
+from url_enrich import enrich_event
 
 # Configuration
 SCREENPIPE_URL = os.environ.get("SCREENPIPE_URL", "http://localhost:3030")
@@ -115,7 +116,7 @@ def fetch_screenpipe_events(
                 if k not in ("content", "type", "timestamp")
             }
         }
-        events.append(event)
+        events.append(enrich_event(event))
 
     return events
 
