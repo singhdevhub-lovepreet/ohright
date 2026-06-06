@@ -230,22 +230,25 @@ def process_pending_events() -> list[dict]:
 def _map_category_to_node_type(category: str) -> str:
     """Map semantic event category to intent graph node type."""
     mapping = {
-        "product_research": "product",
-        "technical_debugging": "workflow",
-        "learning": "interest",
-        "content_consumption": "interest",
-        "deep_work": "project",
-        "communication": "workflow",
-        "planning": "project",
-        "travel_planning": "interest",
-        "job_research": "interest",
-        "startup_ideation": "project",
-        "finance": "habit",
-        "health": "habit",
-        "entertainment": "interest",
-        "administrative": "workflow",
+        "product_research": "shopping",
+        "purchase_intent": "shopping",
+        "technical_debugging": "coding",
+        "learning": "learning",
+        "content_consumption": "browsing",
+        "media_consumption": "media",
+        "deep_work": "coding",
+        "communication": "messaging",
+        "planning": "productivity",
+        "travel_planning": "travel",
+        "job_research": "career",
+        "startup_ideation": "projects",
+        "finance": "finance",
+        "health": "health",
+        "entertainment": "entertainment",
+        "administrative": "system",
+        "recurring_behavior": "habits",
     }
-    return mapping.get(category, "interest")
+    return mapping.get(category, "browsing")
 
 
 def _estimate_dwell(raw_events: list[dict], event_ids: list[int]) -> float:
